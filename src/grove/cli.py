@@ -98,9 +98,18 @@ def _print_tree(repos: list[tuple[str, Path]]) -> None:
 @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
 def clean(dry_run: bool, force: bool) -> None:
     """Remove worktrees that are safe to clean."""
-    click.echo("Scanning worktrees...", nl=False)
-    to_clean = _get_cleanable_branches()
-    click.echo(" done")
+    repos = get_all_repos()
+    if not repos:
+        click.secho("No repositories to scan.", fg="yellow")
+        return
+
+    to_clean: list[BranchStatus] = []
+    for i, (_, repo_path) in enumerate(repos, 1):
+        click.echo(f"\rScanning repositories ({i}/{len(repos)})...", nl=False)
+        for branch in get_repo_branches(repo_path):
+            if branch.is_safe_to_clean:
+                to_clean.append(branch)
+    click.echo(f"\rScanning repositories ({len(repos)}/{len(repos)})... done")
 
     if not to_clean:
         click.secho("Nothing to clean.", fg="green")
