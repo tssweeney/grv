@@ -2,18 +2,18 @@ from pathlib import Path
 
 import pytest
 
-from grove.config import extract_repo_id, get_grove_root
+from grv.config import extract_repo_id, get_grv_root
 
 
-class TestGetGroveRoot:
+class TestGetGrvRoot:
     def test_default_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("GROVE_ROOT", raising=False)
-        result = get_grove_root()
-        assert result == Path.home() / ".grove"
+        monkeypatch.delenv("GRV_ROOT", raising=False)
+        result = get_grv_root()
+        assert result == Path.home() / ".grv"
 
     def test_custom_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("GROVE_ROOT", "/custom/path")
-        result = get_grove_root()
+        monkeypatch.setenv("GRV_ROOT", "/custom/path")
+        result = get_grv_root()
         assert result == Path("/custom/path")
 
 

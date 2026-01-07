@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from grove.cli import main
-from grove.status import BranchInfo, BranchStatus
+from grv.cli import main
+from grv.status import BranchInfo, BranchStatus
 
 
 @pytest.fixture
@@ -29,11 +29,11 @@ class TestShell:
     def test_shell_creates_worktree(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.cli.ensure_base_repo"),
-            patch("grove.cli.ensure_worktree"),
-            patch("grove.cli.get_default_branch", return_value="main"),
+            patch("grv.cli.ensure_base_repo"),
+            patch("grv.cli.ensure_worktree"),
+            patch("grv.cli.get_default_branch", return_value="main"),
             patch("os.chdir"),
             patch("os.execvp"),
         ):
@@ -47,10 +47,10 @@ class TestShell:
     def test_shell_with_branch(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.cli.ensure_base_repo"),
-            patch("grove.cli.ensure_worktree"),
+            patch("grv.cli.ensure_base_repo"),
+            patch("grv.cli.ensure_worktree"),
             patch("os.chdir"),
             patch("os.execvp"),
         ):
@@ -72,21 +72,21 @@ class TestList:
     def test_list_no_repos(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         result = runner.invoke(main, ["list"])
         assert "No repositories found" in result.output
 
     def test_list_selects_branch(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
             patch(
-                "grove.menu.interactive_select",
+                "grv.menu.interactive_select",
                 return_value=(tmp_path / "main", "main"),
             ),
-            patch("grove.menu.shell_into") as mock_shell,
+            patch("grv.menu.shell_into") as mock_shell,
         ):
             runner.invoke(main, ["list"])
             mock_shell.assert_called_once_with(tmp_path / "main", "main")
@@ -94,11 +94,11 @@ class TestList:
     def test_list_cancelled(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.menu.interactive_select", return_value=None),
-            patch("grove.menu.shell_into") as mock_shell,
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.menu.interactive_select", return_value=None),
+            patch("grv.menu.shell_into") as mock_shell,
         ):
             runner.invoke(main, ["list"])
             mock_shell.assert_not_called()
@@ -108,17 +108,17 @@ class TestClean:
     def test_clean_no_repos(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         result = runner.invoke(main, ["clean"])
         assert "No repositories to scan" in result.output
 
     def test_clean_no_branches(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.cli.get_repo_branches_fast", return_value=[]),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_repo_branches_fast", return_value=[]),
         ):
             result = runner.invoke(main, ["clean"])
             assert "No branches to scan" in result.output
@@ -126,7 +126,7 @@ class TestClean:
     def test_clean_nothing_to_clean(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
         unsafe_status = BranchStatus(
             name="feature",
@@ -139,9 +139,9 @@ class TestClean:
             deletions=0,
         )
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
-            patch("grove.cli.get_branch_status", return_value=unsafe_status),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grv.cli.get_branch_status", return_value=unsafe_status),
         ):
             result = runner.invoke(main, ["clean"])
             assert "Nothing to clean" in result.output
@@ -149,7 +149,7 @@ class TestClean:
     def test_clean_dry_run(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
         safe_status = BranchStatus(
             name="feature",
@@ -162,9 +162,9 @@ class TestClean:
             deletions=0,
         )
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
-            patch("grove.cli.get_branch_status", return_value=safe_status),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grv.cli.get_branch_status", return_value=safe_status),
         ):
             result = runner.invoke(main, ["clean", "--dry-run"])
             assert "Would remove 1 worktree" in result.output
@@ -172,7 +172,7 @@ class TestClean:
     def test_clean_with_force(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         repo_path = tmp_path / "repo"
         trunk = repo_path / "trunk"
         trunk.mkdir(parents=True)
@@ -189,9 +189,9 @@ class TestClean:
             deletions=0,
         )
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", repo_path)]),
-            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
-            patch("grove.cli.get_branch_status", return_value=safe_status),
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch("grv.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grv.cli.get_branch_status", return_value=safe_status),
             patch("subprocess.run"),
         ):
             result = runner.invoke(main, ["clean", "--force"])
@@ -200,7 +200,7 @@ class TestClean:
     def test_clean_abort(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
         safe_status = BranchStatus(
             name="feature",
@@ -213,9 +213,9 @@ class TestClean:
             deletions=0,
         )
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
-            patch("grove.cli.get_branch_status", return_value=safe_status),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grv.cli.get_branch_status", return_value=safe_status),
         ):
             result = runner.invoke(main, ["clean"], input="n\n")
             assert result.exit_code == 1
@@ -223,7 +223,7 @@ class TestClean:
     def test_clean_filters_unsafe_branches(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         clean_info = BranchInfo(name="cleanable", path=tmp_path / "cleanable")
         dirty_info = BranchInfo(name="dirty", path=tmp_path / "dirty")
         clean_status = BranchStatus(
@@ -251,12 +251,12 @@ class TestClean:
             return clean_status if name == "cleanable" else dirty_status
 
         with (
-            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.cli.get_all_repos", return_value=[("repo", tmp_path)]),
             patch(
-                "grove.cli.get_repo_branches_fast",
+                "grv.cli.get_repo_branches_fast",
                 return_value=[clean_info, dirty_info],
             ),
-            patch("grove.cli.get_branch_status", side_effect=mock_status),
+            patch("grv.cli.get_branch_status", side_effect=mock_status),
         ):
             result = runner.invoke(main, ["clean", "--dry-run"])
             assert "cleanable" in result.output

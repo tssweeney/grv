@@ -3,19 +3,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from grove.menu import build_menu_entries, interactive_select
-from grove.status import BranchInfo
+from grv.menu import build_menu_entries, interactive_select
+from grv.status import BranchInfo
 
 
 class TestBuildMenuEntries:
     def test_builds_entries(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch = BranchInfo(name="main", path=tmp_path / "main")
         with (
-            patch("grove.menu.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.menu.get_repo_branches_fast", return_value=[branch]),
+            patch("grv.menu.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.menu.get_repo_branches_fast", return_value=[branch]),
         ):
             entries = build_menu_entries()
             assert len(entries) == 2  # repo header + branch
@@ -25,18 +25,18 @@ class TestBuildMenuEntries:
             assert entries[1][1] == branch
 
     def test_empty_repos(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        with patch("grove.menu.get_all_repos", return_value=[]):
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        with patch("grv.menu.get_all_repos", return_value=[]):
             entries = build_menu_entries()
             assert entries == []
 
     def test_skips_repos_with_no_branches(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         with (
-            patch("grove.menu.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.menu.get_repo_branches_fast", return_value=[]),
+            patch("grv.menu.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grv.menu.get_repo_branches_fast", return_value=[]),
         ):
             entries = build_menu_entries()
             assert entries == []
@@ -46,25 +46,25 @@ class TestInteractiveSelect:
     def test_returns_none_when_no_entries(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        with patch("grove.menu.build_menu_entries", return_value=[]):
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        with patch("grv.menu.build_menu_entries", return_value=[]):
             result = interactive_select()
             assert result is None
 
     def test_returns_selected_path_and_name(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch = BranchInfo(name="main", path=tmp_path / "main")
         with (
             patch(
-                "grove.menu.build_menu_entries",
+                "grv.menu.build_menu_entries",
                 return_value=[
                     ("└── repo", None),
                     ("    └─ main", branch),
                 ],
             ),
-            patch("grove.menu.TerminalMenu") as mock_menu_class,
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
         ):
             mock_menu = MagicMock()
             mock_menu.show.return_value = 1  # Select the branch, not header
@@ -75,17 +75,17 @@ class TestInteractiveSelect:
     def test_returns_none_when_cancelled(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch = BranchInfo(name="main", path=tmp_path / "main")
         with (
             patch(
-                "grove.menu.build_menu_entries",
+                "grv.menu.build_menu_entries",
                 return_value=[
                     ("└── repo", None),
                     ("    └─ main", branch),
                 ],
             ),
-            patch("grove.menu.TerminalMenu") as mock_menu_class,
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
         ):
             mock_menu = MagicMock()
             mock_menu.show.return_value = None
@@ -96,17 +96,17 @@ class TestInteractiveSelect:
     def test_returns_none_when_repo_header_selected(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
         branch = BranchInfo(name="main", path=tmp_path / "main")
         with (
             patch(
-                "grove.menu.build_menu_entries",
+                "grv.menu.build_menu_entries",
                 return_value=[
                     ("└── repo", None),
                     ("    └─ main", branch),
                 ],
             ),
-            patch("grove.menu.TerminalMenu") as mock_menu_class,
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
         ):
             mock_menu = MagicMock()
             mock_menu.show.return_value = 0  # Select the repo header

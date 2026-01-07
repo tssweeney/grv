@@ -1,4 +1,4 @@
-# grove
+# grv
 
 Git workspace manager using worktrees. Clone once, work on many branches simultaneously.
 
@@ -17,12 +17,12 @@ Meanwhile, countless tools are appearing daily—each bundling worktree manageme
 
 ## The Solution
 
-`grove` is an extremely minimalist worktree manager. Three commands:
+`grv` is an extremely minimalist worktree manager. Three commands:
 
 ```bash
-grove shell <repo> [branch]  # Shell into a worktree (clones if needed)
-grove list                    # Browse your worktrees
-grove clean                   # Cleanup remotely-backed work
+grv shell <repo> [branch]  # Shell into a worktree (clones if needed)
+grv list                    # Browse your worktrees
+grv clean                   # Cleanup remotely-backed work
 ```
 
 That's it. Use your favorite editor, CLI tools, whatever. But stay organized.
@@ -32,30 +32,30 @@ That's it. Use your favorite editor, CLI tools, whatever. But stay organized.
 > **Alpha**: Not yet published to PyPI.
 
 ```bash
-uvx git+https://github.com/tssweeney/grove [commands]
+uvx git+https://github.com/tssweeney/grv [commands]
 ```
 
 ## Usage
 
 ```bash
 # Open a shell in a worktree (clones repo if needed)
-grove shell git@github.com:user/repo.git
-grove shell git@github.com:user/repo.git feature-branch
+grv shell git@github.com:user/repo.git
+grv shell git@github.com:user/repo.git feature-branch
 
 # List all worktrees with status
-grove list
+grv list
 
 # Clean up merged worktrees
-grove clean
-grove clean --dry-run
+grv clean
+grv clean --dry-run
 ```
 
 ## How it works
 
-`grove` manages git worktrees in `~/.grove/`:
+`grv` manages git worktrees in `~/.grv/`:
 
 ```
-~/.grove/repos/github_com_user_repo/
+~/.grv/repos/github_com_user_repo/
 ├── trunk/              # Base clone (blobless for speed)
 └── tree_branches/
     ├── main/           # Worktree for main
@@ -74,7 +74,7 @@ Each branch gets its own directory. Switch between branches by switching directo
 
 ## Configuration
 
-Set `GROVE_ROOT` to change the workspace location (default: `~/.grove`).
+Set `GRV_ROOT` to change the workspace location (default: `~/.grv`).
 
 ## License
 

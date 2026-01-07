@@ -4,8 +4,8 @@ from pathlib import Path
 import click
 from simple_term_menu import TerminalMenu  # type: ignore[import-untyped]
 
-from grove.config import get_grove_root
-from grove.status import BranchInfo, get_all_repos, get_repo_branches_fast
+from grv.config import get_grv_root
+from grv.status import BranchInfo, get_all_repos, get_repo_branches_fast
 
 
 def build_menu_entries() -> list[tuple[str, BranchInfo | None]]:
@@ -34,7 +34,7 @@ def interactive_select() -> tuple[Path, str] | None:
 
     display = [e[0] for e in entries]
     first_branch = next((i for i, e in enumerate(entries) if e[1] is not None), 0)
-    title = f"Grove Workspace\n{get_grove_root()}\n"
+    title = f"grv workspace\n{get_grv_root()}\n"
     menu = TerminalMenu(
         display,
         title=title,

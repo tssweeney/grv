@@ -3,9 +3,9 @@ import subprocess
 
 import click
 
-from grove.config import extract_repo_id, get_grove_root
-from grove.git import ensure_base_repo, ensure_worktree, get_default_branch
-from grove.status import (
+from grv.config import extract_repo_id, get_grv_root
+from grv.git import ensure_base_repo, ensure_worktree, get_default_branch
+from grv.status import (
     BranchStatus,
     get_all_repos,
     get_branch_status,
@@ -20,8 +20,8 @@ def main(ctx: click.Context) -> None:
 
     \b
     Examples:
-        grove shell git@github.com:user/repo.git
-        grove shell git@github.com:user/repo.git feature-branch
+        grv shell git@github.com:user/repo.git
+        grv shell git@github.com:user/repo.git feature-branch
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
@@ -32,7 +32,7 @@ def main(ctx: click.Context) -> None:
 @click.argument("branch", required=False)
 def shell(repo: str, branch: str | None = None) -> None:
     """Open a shell in a git worktree."""
-    root = get_grove_root()
+    root = get_grv_root()
     repo_id = extract_repo_id(repo)
     repo_path = root / "repos" / repo_id
 
@@ -56,14 +56,14 @@ def shell(repo: str, branch: str | None = None) -> None:
 @main.command("list")
 def list_cmd() -> None:
     """List all worktrees and select one to enter."""
-    from grove.menu import interactive_select, shell_into
+    from grv.menu import interactive_select, shell_into
 
     repos = get_all_repos()
 
     if not repos:
         click.secho("No repositories found.", fg="yellow")
-        click.echo(f"Workspace: {click.style(str(get_grove_root()), fg='blue')}\n")
-        click.echo("Get started: " + click.style("grove shell <repo-url>", fg="cyan"))
+        click.echo(f"Workspace: {click.style(str(get_grv_root()), fg='blue')}\n")
+        click.echo("Get started: " + click.style("grv shell <repo-url>", fg="cyan"))
         return
 
     if result := interactive_select():

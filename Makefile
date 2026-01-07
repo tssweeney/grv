@@ -13,13 +13,13 @@ format-check:
 	uv run ruff format --check .
 
 typecheck:
-	uv run mypy src/grove
+	uv run mypy src/grv
 
 check-loc:
 	uv run python scripts/check_loc.py
 
 check-unused:
-	uv run vulture src/grove --min-confidence 80
+	uv run vulture src/grv --min-confidence 80
 
 check-all: format-check lint typecheck check-loc check-unused test
 

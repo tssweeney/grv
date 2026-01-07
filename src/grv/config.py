@@ -3,9 +3,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-def get_grove_root() -> Path:
-    """Get the GROVE_ROOT directory, defaulting to ~/.grove."""
-    root = os.environ.get("GROVE_ROOT", os.path.expanduser("~/.grove"))
+def get_grv_root() -> Path:
+    """Get the GRV_ROOT directory, defaulting to ~/.grv."""
+    root = os.environ.get("GRV_ROOT", os.path.expanduser("~/.grv"))
     return Path(root)
 
 
