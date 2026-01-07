@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync:*)",
+      "Bash(uv run gtwsp --help:*)",
+      "Bash(uv run gtwsp shell --help:*)",
+      "Bash(GITWSP_ROOT=/tmp/gitwsp-test uv run gtwsp shell:*)"
+    ]
+  }
+}
