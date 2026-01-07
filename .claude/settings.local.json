@@ -6,7 +6,8 @@
       "Bash(uv run gtwsp shell --help:*)",
       "Bash(GITWSP_ROOT=/tmp/gitwsp-test uv run gtwsp shell:*)",
       "Bash(git -C /tmp/gitwsp-test/repos/github_com_pallets_click/trunk config --get remote.origin.promisor)",
-      "Bash(git -C /tmp/gitwsp-test/repos/github_com_pallets_click/trunk config --get remote.origin.partialclonefilter)"
+      "Bash(git -C /tmp/gitwsp-test/repos/github_com_pallets_click/trunk config --get remote.origin.partialclonefilter)",
+      "Bash(uv run:*)"
     ]
   }
 }

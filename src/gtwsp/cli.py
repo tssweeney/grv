@@ -113,20 +113,29 @@ def ensure_worktree(base_path: Path, tree_path: Path, branch: str) -> None:
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx: click.Context) -> None:
-    """Git workspace manager using worktrees."""
+    """Manage git worktrees with ease.
+
+    \b
+    Examples:
+        gtwsp shell git@github.com:user/repo.git
+        gtwsp shell git@github.com:user/repo.git feature-branch
+    """
     if ctx.invoked_subcommand is None:
-        # Default to shell command if no subcommand given
-        ctx.invoke(shell)
+        click.echo(ctx.get_help())
 
 
 @main.command()
 @click.argument("repo")
 @click.argument("branch", required=False)
 def shell(repo: str, branch: str | None = None) -> None:
-    """Open a shell in a worktree for the given repo and branch.
+    """Open a shell in a git worktree.
 
-    REPO: Git repository URL (e.g., git@github.com:user/repo.git)
-    BRANCH: Branch name (defaults to repo's default branch)
+    Clones the repo (if needed) and creates a worktree for the branch.
+    Uses blobless clones for speed. Drops you into a shell in the worktree.
+
+    \b
+    REPO      Git URL (ssh or https)
+    BRANCH    Branch name (default: repo's default branch)
     """
     root = get_gitwsp_root()
     repo_id = extract_repo_id(repo)
