@@ -3,13 +3,24 @@ name = "gtwsp"
 version = "0.1.0"
 description = "Git workspace manager using worktrees"
 readme = "README.md"
-requires-python = ">=3.14"
+license = "MIT"
+requires-python = ">=3.12"
 dependencies = [
     "click>=8.1.0",
+    "simple-term-menu>=1.6.0",
 ]
 
 [project.scripts]
 gtwsp = "gtwsp.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "vulture>=2.14",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -17,3 +28,36 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gtwsp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=gtwsp --cov-report=term-missing --cov-fail-under=100"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.vulture]
+min_confidence = 80
+paths = ["src/gtwsp"]
+
+[tool.coverage.run]
+source = ["src/gtwsp"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "os.execvp",
+    "def shell_into",  # Can't test process replacement
+]
