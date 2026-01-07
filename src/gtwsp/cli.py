@@ -13,23 +13,29 @@ def get_gitwsp_root() -> Path:
     return Path(root)
 
 
-def extract_repo_name(repo: str) -> str:
-    """Extract repository name from a git URL or path."""
+def extract_repo_id(repo: str) -> str:
+    """Extract a unique repository identifier from a git URL.
+
+    Returns a flat string like 'github_com_user_repo' that uniquely identifies
+    the repository across different hosts and users.
+    """
     # Handle SSH URLs like git@github.com:user/repo.git
     if repo.startswith("git@"):
-        repo = repo.split(":")[-1]
+        # git@github.com:user/repo.git -> github.com_user_repo
+        host_and_path = repo[4:]  # Remove 'git@'
+        host, path = host_and_path.split(":", 1)
+        path = path.rstrip("/").removesuffix(".git")
+        raw_id = f"{host}/{path}"
+    elif (parsed := urlparse(repo)).netloc:
+        # Handle HTTPS/HTTP URLs
+        path = parsed.path.rstrip("/").removesuffix(".git").lstrip("/")
+        raw_id = f"{parsed.netloc}/{path}"
+    else:
+        # Fallback: treat as a path
+        raw_id = repo.rstrip("/").removesuffix(".git").lstrip("/")
 
-    # Handle HTTPS URLs
-    parsed = urlparse(repo)
-    if parsed.path:
-        repo = parsed.path
-
-    # Remove .git suffix and leading slashes
-    repo = repo.rstrip("/").removesuffix(".git")
-    repo = repo.lstrip("/")
-
-    # Get just the repo name (last component)
-    return repo.split("/")[-1]
+    # Sanitize: replace . / : with underscores
+    return raw_id.replace(".", "_").replace("/", "_").replace(":", "_")
 
 
 def run_git(*args: str, cwd: Path | None = None, capture: bool = False) -> subprocess.CompletedProcess:
@@ -62,7 +68,7 @@ def ensure_base_repo(repo_url: str, base_path: Path) -> None:
     else:
         click.echo(f"Cloning base repo to {base_path}...", err=True)
         base_path.parent.mkdir(parents=True, exist_ok=True)
-        run_git("clone", repo_url, str(base_path))
+        run_git("clone", "--filter=blob:none", repo_url, str(base_path))
         # Detach HEAD so branches can be used in worktrees
         default_branch = get_default_branch(base_path)
         run_git("checkout", "--detach", f"origin/{default_branch}", cwd=base_path)
@@ -123,21 +129,22 @@ def shell(repo: str, branch: str | None = None) -> None:
     BRANCH: Branch name (defaults to repo's default branch)
     """
     root = get_gitwsp_root()
-    repo_name = extract_repo_name(repo)
+    repo_id = extract_repo_id(repo)
+    repo_path = root / "repos" / repo_id
 
-    base_path = root / "bases" / repo_name
-    ensure_base_repo(repo, base_path)
+    trunk_path = repo_path / "trunk"
+    ensure_base_repo(repo, trunk_path)
 
     # Determine branch
     if branch is None:
-        branch = get_default_branch(base_path)
+        branch = get_default_branch(trunk_path)
 
-    tree_path = root / "trees" / repo_name / branch
-    ensure_worktree(base_path, tree_path, branch)
+    tree_path = repo_path / "tree_branches" / branch
+    ensure_worktree(trunk_path, tree_path, branch)
 
     # Print summary
     click.echo("")
-    click.echo(f"Base:   {base_path}")
+    click.echo(f"Trunk:  {trunk_path}")
     click.echo(f"Tree:   {tree_path}")
     click.echo(f"Branch: {branch}")
     click.echo("")
