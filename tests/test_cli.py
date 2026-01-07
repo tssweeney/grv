@@ -82,11 +82,14 @@ class TestList:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
         with (
             patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.menu.interactive_select", return_value=tmp_path / "main"),
+            patch(
+                "grove.menu.interactive_select",
+                return_value=(tmp_path / "main", "main"),
+            ),
             patch("grove.menu.shell_into") as mock_shell,
         ):
             runner.invoke(main, ["list"])
-            mock_shell.assert_called_once_with(tmp_path / "main")
+            mock_shell.assert_called_once_with(tmp_path / "main", "main")
 
     def test_list_cancelled(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

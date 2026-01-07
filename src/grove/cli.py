@@ -66,8 +66,9 @@ def list_cmd() -> None:
         click.echo("Get started: " + click.style("grove shell <repo-url>", fg="cyan"))
         return
 
-    if selected := interactive_select():
-        shell_into(selected)
+    if result := interactive_select():
+        path, branch_name = result
+        shell_into(path, branch_name)
 
 
 @main.command()
