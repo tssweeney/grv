@@ -116,33 +116,33 @@ def get_all_repos() -> list[tuple[str, Path]]:
     return sorted(repos)
 
 
+def _find_worktrees(repo_path: Path) -> list[tuple[str, Path]]:
+    """Find all worktree directories and their branch names."""
+    tree_branches_dir = repo_path / "tree_branches"
+    if not tree_branches_dir.exists():
+        return []
+    result = []
+    for git_file in tree_branches_dir.rglob(".git"):
+        branch_dir = git_file.parent
+        branch_name = str(branch_dir.relative_to(tree_branches_dir))
+        result.append((branch_name, branch_dir))
+    return sorted(result)
+
+
 def get_repo_branches(repo_path: Path) -> list[BranchStatus]:
     """Get all branches for a repo with their status (slow, uses git)."""
     trunk_path = repo_path / "trunk"
-    tree_branches_dir = repo_path / "tree_branches"
-
-    if not tree_branches_dir.exists():
-        return []
-
-    branches = []
-    for branch_dir in tree_branches_dir.iterdir():
-        if branch_dir.is_dir() and (branch_dir / ".git").exists():
-            status = get_branch_status(branch_dir, trunk_path, branch_dir.name)
-            branches.append(status)
-
-    return sorted(branches, key=lambda b: b.name)
+    return sorted(
+        [
+            get_branch_status(path, trunk_path, name)
+            for name, path in _find_worktrees(repo_path)
+        ],
+        key=lambda b: b.name,
+    )
 
 
 def get_repo_branches_fast(repo_path: Path) -> list[BranchInfo]:
     """Get all branches for a repo (fast, no git operations)."""
-    tree_branches_dir = repo_path / "tree_branches"
-
-    if not tree_branches_dir.exists():
-        return []
-
-    branches = []
-    for branch_dir in tree_branches_dir.iterdir():
-        if branch_dir.is_dir() and (branch_dir / ".git").exists():
-            branches.append(BranchInfo(name=branch_dir.name, path=branch_dir))
-
-    return sorted(branches, key=lambda b: b.name)
+    return [
+        BranchInfo(name=name, path=path) for name, path in _find_worktrees(repo_path)
+    ]

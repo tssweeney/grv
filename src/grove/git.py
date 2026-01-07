@@ -34,12 +34,14 @@ def branch_exists_locally(base_path: Path, branch: str) -> bool:
 def ensure_base_repo(repo_url: str, base_path: Path) -> None:
     """Ensure the base repository exists and is up to date."""
     if base_path.exists():
-        click.echo(f"Updating base repo at {base_path}...", err=True)
+        click.secho("Fetching latest changes...", fg="blue", err=True)
         run_git("fetch", "--all", "--prune", cwd=base_path)
         default_branch = get_default_branch(base_path)
         run_git("checkout", "--detach", f"origin/{default_branch}", cwd=base_path)
     else:
-        click.echo(f"Cloning base repo to {base_path}...", err=True)
+        click.secho(
+            "Cloning repository (this may take a moment)...", fg="blue", err=True
+        )
         base_path.parent.mkdir(parents=True, exist_ok=True)
         run_git("clone", "--filter=blob:none", repo_url, str(base_path))
         default_branch = get_default_branch(base_path)
@@ -49,10 +51,10 @@ def ensure_base_repo(repo_url: str, base_path: Path) -> None:
 def ensure_worktree(base_path: Path, tree_path: Path, branch: str) -> None:
     """Ensure the worktree exists for the given branch."""
     if tree_path.exists():
-        click.echo(f"Worktree already exists at {tree_path}", err=True)
+        click.secho("Worktree ready.", fg="green", err=True)
         return
 
-    click.echo(f"Creating worktree for branch '{branch}' at {tree_path}...", err=True)
+    click.secho(f"Setting up worktree for '{branch}'...", fg="blue", err=True)
     tree_path.parent.mkdir(parents=True, exist_ok=True)
 
     if branch_exists_locally(base_path, branch):

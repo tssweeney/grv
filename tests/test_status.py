@@ -216,6 +216,32 @@ class TestGetRepoBranches:
         result = get_repo_branches(tmp_path)
         assert result == []
 
+    def test_branch_with_slashes(self, tmp_path: Path) -> None:
+        trunk = tmp_path / "trunk"
+        trunk.mkdir()
+        branches_dir = tmp_path / "tree_branches"
+        # Branch name "feature/foo" creates nested directory
+        branch = branches_dir / "feature" / "foo"
+        branch.mkdir(parents=True)
+        (branch / ".git").touch()
+
+        with patch("grove.status.get_branch_status") as mock_status:
+            mock_status.return_value = BranchStatus(
+                name="feature/foo",
+                path=branch,
+                has_remote=True,
+                is_merged=False,
+                unpushed_commits=0,
+                uncommitted_changes=0,
+                insertions=0,
+                deletions=0,
+            )
+            result = get_repo_branches(tmp_path)
+            assert len(result) == 1
+            assert result[0].name == "feature/foo"
+            # Verify get_branch_status was called with correct branch name
+            mock_status.assert_called_once_with(branch, trunk, "feature/foo")
+
 
 class TestGetRepoBranchesFast:
     def test_no_tree_branches(self, tmp_path: Path) -> None:
@@ -252,6 +278,35 @@ class TestGetRepoBranchesFast:
 
         result = get_repo_branches_fast(tmp_path)
         assert [b.name for b in result] == ["alpha", "middle", "zebra"]
+
+    def test_branch_with_slashes(self, tmp_path: Path) -> None:
+        branches_dir = tmp_path / "tree_branches"
+        # Branch name "feature/foo" creates nested directory
+        branch = branches_dir / "feature" / "foo"
+        branch.mkdir(parents=True)
+        (branch / ".git").touch()
+
+        result = get_repo_branches_fast(tmp_path)
+        assert len(result) == 1
+        assert result[0].name == "feature/foo"
+        assert result[0].path == branch
+
+    def test_mixed_branches_with_and_without_slashes(self, tmp_path: Path) -> None:
+        branches_dir = tmp_path / "tree_branches"
+        # Simple branch
+        simple = branches_dir / "main"
+        simple.mkdir(parents=True)
+        (simple / ".git").touch()
+        # Nested branch
+        nested = branches_dir / "feature" / "bar"
+        nested.mkdir(parents=True)
+        (nested / ".git").touch()
+
+        result = get_repo_branches_fast(tmp_path)
+        assert len(result) == 2
+        names = [b.name for b in result]
+        assert "main" in names
+        assert "feature/bar" in names
 
 
 class TestEdgeCases:
