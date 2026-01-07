@@ -12,9 +12,9 @@
 uv run pytest                       # Tests (must pass, 100% coverage)
 uv run ruff format .                # Format
 uv run ruff check .                 # Lint
-uv run mypy src/gtwsp               # Type check
+uv run mypy src/grove               # Type check
 uv run python scripts/check_loc.py  # Line count check
-uv run vulture src/gtwsp            # Unused symbols
+uv run vulture src/grove            # Unused symbols
 ```
 
 Run all before committing.

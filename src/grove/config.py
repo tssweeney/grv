@@ -3,9 +3,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-def get_gitwsp_root() -> Path:
-    """Get the GITWSP_ROOT directory, defaulting to ~/.gitwsp."""
-    root = os.environ.get("GITWSP_ROOT", os.path.expanduser("~/.gitwsp"))
+def get_grove_root() -> Path:
+    """Get the GROVE_ROOT directory, defaulting to ~/.grove."""
+    root = os.environ.get("GROVE_ROOT", os.path.expanduser("~/.grove"))
     return Path(root)
 
 

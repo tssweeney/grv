@@ -2,18 +2,18 @@ from pathlib import Path
 
 import pytest
 
-from gtwsp.config import extract_repo_id, get_gitwsp_root
+from grove.config import extract_repo_id, get_grove_root
 
 
-class TestGetGitwspRoot:
+class TestGetGroveRoot:
     def test_default_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("GITWSP_ROOT", raising=False)
-        result = get_gitwsp_root()
-        assert result == Path.home() / ".gitwsp"
+        monkeypatch.delenv("GROVE_ROOT", raising=False)
+        result = get_grove_root()
+        assert result == Path.home() / ".grove"
 
     def test_custom_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("GITWSP_ROOT", "/custom/path")
-        result = get_gitwsp_root()
+        monkeypatch.setenv("GROVE_ROOT", "/custom/path")
+        result = get_grove_root()
         assert result == Path("/custom/path")
 
 

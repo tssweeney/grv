@@ -1,11 +1,17 @@
 import os
 import subprocess
+from pathlib import Path
 
 import click
 
-from gtwsp.config import extract_repo_id, get_gitwsp_root
-from gtwsp.git import ensure_base_repo, ensure_worktree, get_default_branch
-from gtwsp.status import BranchStatus, get_all_repos, get_repo_branches, get_repo_branches_fast
+from grove.config import extract_repo_id, get_grove_root
+from grove.git import ensure_base_repo, ensure_worktree, get_default_branch
+from grove.status import (
+    BranchStatus,
+    get_all_repos,
+    get_repo_branches,
+    get_repo_branches_fast,
+)
 
 
 @click.group(invoke_without_command=True)
@@ -15,8 +21,8 @@ def main(ctx: click.Context) -> None:
 
     \b
     Examples:
-        gtwsp shell git@github.com:user/repo.git
-        gtwsp shell git@github.com:user/repo.git feature-branch
+        grove shell git@github.com:user/repo.git
+        grove shell git@github.com:user/repo.git feature-branch
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
@@ -27,7 +33,7 @@ def main(ctx: click.Context) -> None:
 @click.argument("branch", required=False)
 def shell(repo: str, branch: str | None = None) -> None:
     """Open a shell in a git worktree."""
-    root = get_gitwsp_root()
+    root = get_grove_root()
     repo_id = extract_repo_id(repo)
     repo_path = root / "repos" / repo_id
 
@@ -55,13 +61,13 @@ def shell(repo: str, branch: str | None = None) -> None:
 @click.option("--no-interactive", "-n", is_flag=True, help="Disable interactive mode")
 def list_cmd(no_interactive: bool) -> None:
     """List all worktrees. Interactive by default - select to shell in."""
-    from gtwsp.menu import interactive_select, shell_into
+    from grove.menu import interactive_select, shell_into
 
     repos = get_all_repos()
 
     if not repos:
         click.echo("No repositories found.")
-        click.echo(f"Workspace root: {get_gitwsp_root()}")
+        click.echo(f"Workspace root: {get_grove_root()}")
         return
 
     if not no_interactive:
@@ -73,10 +79,10 @@ def list_cmd(no_interactive: bool) -> None:
     _print_tree(repos)
 
 
-def _print_tree(repos: list[tuple[str, object]]) -> None:
+def _print_tree(repos: list[tuple[str, Path]]) -> None:
     """Print tree view of repos and branches (fast, no git operations)."""
     for repo_name, repo_path in repos:
-        branches = get_repo_branches_fast(repo_path)  # type: ignore[arg-type]
+        branches = get_repo_branches_fast(repo_path)
         if not branches:
             continue
         click.echo(f"\n{repo_name}")

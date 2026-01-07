@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 
-from simple_term_menu import TerminalMenu
+from simple_term_menu import TerminalMenu  # type: ignore[import-untyped]
 
-from gtwsp.status import BranchInfo, get_all_repos, get_repo_branches_fast
+from grove.status import BranchInfo, get_all_repos, get_repo_branches_fast
 
 
 def build_menu_entries() -> list[tuple[str, BranchInfo]]:
@@ -31,7 +31,7 @@ def interactive_select() -> Path | None:
         display_items,
         title="Select a worktree (↑/↓ to navigate, Enter to select, q to quit):",
     )
-    selected_index = menu.show()
+    selected_index: int | None = menu.show()
 
     if selected_index is None:
         return None

@@ -3,8 +3,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from gtwsp.config import get_gitwsp_root
-from gtwsp.git import get_default_branch
+from grove.config import get_grove_root
+from grove.git import get_default_branch
 
 
 @dataclass
@@ -105,7 +105,7 @@ def get_branch_status(tree_path: Path, trunk_path: Path, branch: str) -> BranchS
 
 def get_all_repos() -> list[tuple[str, Path]]:
     """Get all repos in the workspace."""
-    repos_dir = get_gitwsp_root() / "repos"
+    repos_dir = get_grove_root() / "repos"
     if not repos_dir.exists():
         return []
 
