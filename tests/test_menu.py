@@ -21,13 +21,26 @@ class TestBuildMenuEntries:
             patch("grove.menu.get_repo_branches_fast", return_value=[branch]),
         ):
             entries = build_menu_entries()
-            assert len(entries) == 1
-            assert entries[0][0] == "repo/main"
-            assert entries[0][1] == branch
+            assert len(entries) == 2  # repo header + branch
+            assert "repo" in entries[0][0]
+            assert entries[0][1] is None  # repo header not selectable
+            assert "main" in entries[1][0]
+            assert entries[1][1] == branch
 
     def test_empty_repos(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
         with patch("grove.menu.get_all_repos", return_value=[]):
+            entries = build_menu_entries()
+            assert entries == []
+
+    def test_skips_repos_with_no_branches(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        with (
+            patch("grove.menu.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grove.menu.get_repo_branches_fast", return_value=[]),
+        ):
             entries = build_menu_entries()
             assert entries == []
 

@@ -12,7 +12,8 @@
       "Bash(git -C /tmp/gitwsp-test/repos/github_com_pallets_click/tree_branches/my-feature checkout -- README.md)",
       "Bash(wc:*)",
       "Bash(make ci:*)",
-      "Bash(make format:*)"
+      "Bash(make format:*)",
+      "Bash(GROVE_ROOT=/Users/timothysweeney/.grove uv run grove clean:*)"
     ]
   }
 }

@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from grove.cli import _get_cleanable_branches, main
+from grove.cli import main
 from grove.status import BranchInfo, BranchStatus
 
 
@@ -73,34 +73,10 @@ class TestList:
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        result = runner.invoke(main, ["list", "--no-interactive"])
+        result = runner.invoke(main, ["list"])
         assert "No repositories found" in result.output
 
-    def test_list_with_repos(
-        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        with patch("grove.cli.get_all_repos") as mock_repos:
-            mock_repos.return_value = [("github_com_user_repo", tmp_path)]
-            with patch("grove.cli.get_repo_branches_fast") as mock_branches:
-                mock_branches.return_value = [
-                    BranchInfo(name="main", path=tmp_path / "main")
-                ]
-                result = runner.invoke(main, ["list", "-n"])
-                assert "github_com_user_repo" in result.output
-                assert "main" in result.output
-
-    def test_list_skips_empty_repos(
-        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        with patch("grove.cli.get_all_repos") as mock_repos:
-            mock_repos.return_value = [("empty_repo", tmp_path)]
-            with patch("grove.cli.get_repo_branches_fast", return_value=[]):
-                result = runner.invoke(main, ["list", "-n"])
-                assert "empty_repo" not in result.output
-
-    def test_list_interactive_selects_branch(
+    def test_list_selects_branch(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
@@ -112,7 +88,7 @@ class TestList:
             runner.invoke(main, ["list"])
             mock_shell.assert_called_once_with(tmp_path / "main")
 
-    def test_list_interactive_cancelled(
+    def test_list_cancelled(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
@@ -126,11 +102,44 @@ class TestList:
 
 
 class TestClean:
+    def test_clean_no_repos(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        result = runner.invoke(main, ["clean"])
+        assert "No repositories to scan" in result.output
+
+    def test_clean_no_branches(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
+        with (
+            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grove.cli.get_repo_branches_fast", return_value=[]),
+        ):
+            result = runner.invoke(main, ["clean"])
+            assert "No branches to scan" in result.output
+
     def test_clean_nothing_to_clean(
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        with patch("grove.cli._get_cleanable_branches", return_value=[]):
+        branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
+        unsafe_status = BranchStatus(
+            name="feature",
+            path=tmp_path / "feature",
+            has_remote=False,
+            is_merged=False,
+            unpushed_commits=1,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        with (
+            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grove.cli.get_branch_status", return_value=unsafe_status),
+        ):
             result = runner.invoke(main, ["clean"])
             assert "Nothing to clean" in result.output
 
@@ -138,7 +147,8 @@ class TestClean:
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        branch = BranchStatus(
+        branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
+        safe_status = BranchStatus(
             name="feature",
             path=tmp_path / "feature",
             has_remote=True,
@@ -148,7 +158,11 @@ class TestClean:
             insertions=0,
             deletions=0,
         )
-        with patch("grove.cli._get_cleanable_branches", return_value=[branch]):
+        with (
+            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grove.cli.get_branch_status", return_value=safe_status),
+        ):
             result = runner.invoke(main, ["clean", "--dry-run"])
             assert "Would remove 1 worktree" in result.output
 
@@ -160,7 +174,8 @@ class TestClean:
         trunk = repo_path / "trunk"
         trunk.mkdir(parents=True)
         branch_path = repo_path / "tree_branches" / "feature"
-        branch = BranchStatus(
+        branch_info = BranchInfo(name="feature", path=branch_path)
+        safe_status = BranchStatus(
             name="feature",
             path=branch_path,
             has_remote=True,
@@ -171,7 +186,9 @@ class TestClean:
             deletions=0,
         )
         with (
-            patch("grove.cli._get_cleanable_branches", return_value=[branch]),
+            patch("grove.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grove.cli.get_branch_status", return_value=safe_status),
             patch("subprocess.run"),
         ):
             result = runner.invoke(main, ["clean", "--force"])
@@ -181,7 +198,8 @@ class TestClean:
         self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        branch = BranchStatus(
+        branch_info = BranchInfo(name="feature", path=tmp_path / "feature")
+        safe_status = BranchStatus(
             name="feature",
             path=tmp_path / "feature",
             has_remote=True,
@@ -191,19 +209,23 @@ class TestClean:
             insertions=0,
             deletions=0,
         )
-        with patch("grove.cli._get_cleanable_branches", return_value=[branch]):
+        with (
+            patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
+            patch("grove.cli.get_repo_branches_fast", return_value=[branch_info]),
+            patch("grove.cli.get_branch_status", return_value=safe_status),
+        ):
             result = runner.invoke(main, ["clean"], input="n\n")
             assert result.exit_code == 1
 
-
-class TestGetCleanableBranches:
-    def test_filters_safe_branches(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    def test_clean_filters_unsafe_branches(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("GROVE_ROOT", str(tmp_path))
-        safe = BranchStatus(
-            name="safe",
-            path=Path("/safe"),
+        clean_info = BranchInfo(name="cleanable", path=tmp_path / "cleanable")
+        dirty_info = BranchInfo(name="dirty", path=tmp_path / "dirty")
+        clean_status = BranchStatus(
+            name="cleanable",
+            path=tmp_path / "cleanable",
             has_remote=True,
             is_merged=True,
             unpushed_commits=0,
@@ -211,9 +233,9 @@ class TestGetCleanableBranches:
             insertions=0,
             deletions=0,
         )
-        unsafe = BranchStatus(
-            name="unsafe",
-            path=Path("/unsafe"),
+        dirty_status = BranchStatus(
+            name="dirty",
+            path=tmp_path / "dirty",
             has_remote=False,
             is_merged=True,
             unpushed_commits=0,
@@ -221,10 +243,19 @@ class TestGetCleanableBranches:
             insertions=0,
             deletions=0,
         )
+
+        def mock_status(_path: Path, _trunk: Path, name: str) -> BranchStatus:
+            return clean_status if name == "cleanable" else dirty_status
+
         with (
             patch("grove.cli.get_all_repos", return_value=[("repo", tmp_path)]),
-            patch("grove.cli.get_repo_branches", return_value=[safe, unsafe]),
+            patch(
+                "grove.cli.get_repo_branches_fast",
+                return_value=[clean_info, dirty_info],
+            ),
+            patch("grove.cli.get_branch_status", side_effect=mock_status),
         ):
-            result = _get_cleanable_branches()
-            assert len(result) == 1
-            assert result[0].name == "safe"
+            result = runner.invoke(main, ["clean", "--dry-run"])
+            assert "cleanable" in result.output
+            assert "dirty" not in result.output
+            assert "Would remove 1 worktree" in result.output

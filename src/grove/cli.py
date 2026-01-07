@@ -1,6 +1,5 @@
 import os
 import subprocess
-from pathlib import Path
 
 import click
 
@@ -9,7 +8,7 @@ from grove.git import ensure_base_repo, ensure_worktree, get_default_branch
 from grove.status import (
     BranchStatus,
     get_all_repos,
-    get_repo_branches,
+    get_branch_status,
     get_repo_branches_fast,
 )
 
@@ -46,8 +45,7 @@ def shell(repo: str, branch: str | None = None) -> None:
     tree_path = repo_path / "tree_branches" / branch
     ensure_worktree(trunk_path, tree_path, branch)
 
-    click.echo("")
-    click.secho("Ready! Entering worktree shell...", fg="green", bold=True)
+    click.secho("\nReady! Entering worktree shell...", fg="green", bold=True)
     click.echo(f"\n  Branch: {click.style(branch, fg='cyan', bold=True)}")
     click.echo(f"  Path:   {click.style(str(tree_path), fg='blue')}\n")
     os.chdir(tree_path)
@@ -56,9 +54,8 @@ def shell(repo: str, branch: str | None = None) -> None:
 
 
 @main.command("list")
-@click.option("--no-interactive", "-n", is_flag=True, help="Disable interactive mode")
-def list_cmd(no_interactive: bool) -> None:
-    """List all worktrees. Interactive by default - select to shell in."""
+def list_cmd() -> None:
+    """List all worktrees and select one to enter."""
     from grove.menu import interactive_select, shell_into
 
     repos = get_all_repos()
@@ -69,28 +66,8 @@ def list_cmd(no_interactive: bool) -> None:
         click.echo("Get started: " + click.style("grove shell <repo-url>", fg="cyan"))
         return
 
-    if not no_interactive:
-        selected = interactive_select()
-        if selected:
-            shell_into(selected)
-        return
-
-    _print_tree(repos)
-
-
-def _print_tree(repos: list[tuple[str, Path]]) -> None:
-    """Print tree view of repos and branches (fast, no git operations)."""
-    click.echo("")
-    for repo_name, repo_path in repos:
-        branches = get_repo_branches_fast(repo_path)
-        if not branches:
-            continue
-        click.echo(click.style(f"  {repo_name}", fg="blue", bold=True))
-        for i, branch in enumerate(branches):
-            is_last = i == len(branches) - 1
-            prefix = "  └─ " if is_last else "  ├─ "
-            click.echo(f"  {prefix}{click.style(branch.name, fg='cyan')}")
-        click.echo("")
+    if selected := interactive_select():
+        shell_into(selected)
 
 
 @main.command()
@@ -103,22 +80,28 @@ def clean(dry_run: bool, force: bool) -> None:
         click.secho("No repositories to scan.", fg="yellow")
         return
 
+    # Collect all branches first (fast)
+    all_branches = [(r, b) for _, r in repos for b in get_repo_branches_fast(r)]
+    total = len(all_branches)
+    if not total:
+        click.secho("No branches to scan.", fg="yellow")
+        return
+
     to_clean: list[BranchStatus] = []
-    for i, (_, repo_path) in enumerate(repos, 1):
-        click.echo(f"\rScanning repositories ({i}/{len(repos)})...", nl=False)
-        for branch in get_repo_branches(repo_path):
-            if branch.is_safe_to_clean:
-                to_clean.append(branch)
-    click.echo(f"\rScanning repositories ({len(repos)}/{len(repos)})... done")
+    for i, (repo_path, branch) in enumerate(all_branches, 1):
+        click.echo(f"\rScanning branch {i}/{total}...", nl=False)
+        status = get_branch_status(branch.path, repo_path / "trunk", branch.name)
+        if status.is_safe_to_clean:
+            to_clean.append(status)
+    click.echo(f"\rScanning branch {total}/{total}... done")
 
     if not to_clean:
         click.secho("Nothing to clean.", fg="green")
         return
 
-    click.echo("")
-    click.secho("Worktrees to clean:", bold=True)
-    for branch in to_clean:
-        click.echo(f"  {click.style(branch.name, fg='cyan')} ({branch.path})")
+    click.secho("\nWorktrees to clean:", bold=True)
+    for b in to_clean:
+        click.echo(f"  {click.style(b.name, fg='cyan')} ({b.path})")
 
     if dry_run:
         click.secho(f"\nWould remove {len(to_clean)} worktree(s).", fg="yellow")
@@ -126,32 +109,18 @@ def clean(dry_run: bool, force: bool) -> None:
 
     if not force:
         click.confirm(f"\nRemove {len(to_clean)} worktree(s)?", abort=True)
-
     click.echo("")
-    for branch in to_clean:
-        trunk = branch.path.parent.parent / "trunk"
-        click.echo(f"  Removing {click.style(branch.name, fg='cyan')}...", nl=False)
-        subprocess.run(
-            ["git", "worktree", "remove", str(branch.path)],
-            cwd=trunk,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "branch", "-d", branch.name], cwd=trunk, capture_output=True
-        )
+    for b in to_clean:
+        trunk = b.path.parent.parent / "trunk"
+        click.echo(f"  Removing {click.style(b.name, fg='cyan')}...", nl=False)
+        for cmd in [
+            ["git", "worktree", "remove", str(b.path)],
+            ["git", "branch", "-d", b.name],
+        ]:
+            subprocess.run(cmd, cwd=trunk, capture_output=True)
         click.secho(" done", fg="green")
 
     click.secho(f"\nCleaned {len(to_clean)} worktree(s).", fg="green", bold=True)
-
-
-def _get_cleanable_branches() -> list[BranchStatus]:
-    """Get all branches that are safe to clean."""
-    to_clean: list[BranchStatus] = []
-    for _, repo_path in get_all_repos():
-        for branch in get_repo_branches(repo_path):
-            if branch.is_safe_to_clean:
-                to_clean.append(branch)
-    return to_clean
 
 
 if __name__ == "__main__":
