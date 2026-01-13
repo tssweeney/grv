@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from grv.menu import build_menu_entries, interactive_select
+from grv.menu import MenuAction, build_menu_entries, interactive_select
 from grv.status import BranchInfo
 
 
@@ -68,9 +68,10 @@ class TestInteractiveSelect:
         ):
             mock_menu = MagicMock()
             mock_menu.show.return_value = 1  # Select the branch, not header
+            mock_menu.chosen_accept_key = "enter"
             mock_menu_class.return_value = mock_menu
             result = interactive_select()
-            assert result == (tmp_path / "main", "main")
+            assert result == (tmp_path / "main", "main", MenuAction.SHELL)
 
     def test_returns_none_when_cancelled(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -113,3 +114,91 @@ class TestInteractiveSelect:
             mock_menu_class.return_value = mock_menu
             result = interactive_select()
             assert result is None
+
+    def test_returns_clean_action_on_c_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        branch = BranchInfo(name="main", path=tmp_path / "main")
+        with (
+            patch(
+                "grv.menu.build_menu_entries",
+                return_value=[
+                    ("└── repo", None),
+                    ("    └─ main", branch),
+                ],
+            ),
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
+        ):
+            mock_menu = MagicMock()
+            mock_menu.show.return_value = 1
+            mock_menu.chosen_accept_key = "c"
+            mock_menu_class.return_value = mock_menu
+            result = interactive_select()
+            assert result == (tmp_path / "main", "main", MenuAction.CLEAN)
+
+    def test_returns_delete_action_on_d_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        branch = BranchInfo(name="main", path=tmp_path / "main")
+        with (
+            patch(
+                "grv.menu.build_menu_entries",
+                return_value=[
+                    ("└── repo", None),
+                    ("    └─ main", branch),
+                ],
+            ),
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
+        ):
+            mock_menu = MagicMock()
+            mock_menu.show.return_value = 1
+            mock_menu.chosen_accept_key = "d"
+            mock_menu_class.return_value = mock_menu
+            result = interactive_select()
+            assert result == (tmp_path / "main", "main", MenuAction.DELETE)
+
+    def test_returns_shell_action_on_s_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        branch = BranchInfo(name="main", path=tmp_path / "main")
+        with (
+            patch(
+                "grv.menu.build_menu_entries",
+                return_value=[
+                    ("└── repo", None),
+                    ("    └─ main", branch),
+                ],
+            ),
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
+        ):
+            mock_menu = MagicMock()
+            mock_menu.show.return_value = 1
+            mock_menu.chosen_accept_key = "s"
+            mock_menu_class.return_value = mock_menu
+            result = interactive_select()
+            assert result == (tmp_path / "main", "main", MenuAction.SHELL)
+
+    def test_returns_shell_action_on_unknown_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        branch = BranchInfo(name="main", path=tmp_path / "main")
+        with (
+            patch(
+                "grv.menu.build_menu_entries",
+                return_value=[
+                    ("└── repo", None),
+                    ("    └─ main", branch),
+                ],
+            ),
+            patch("grv.menu.TerminalMenu") as mock_menu_class,
+        ):
+            mock_menu = MagicMock()
+            mock_menu.show.return_value = 1
+            mock_menu.chosen_accept_key = "unknown"
+            mock_menu_class.return_value = mock_menu
+            result = interactive_select()
+            assert result == (tmp_path / "main", "main", MenuAction.SHELL)

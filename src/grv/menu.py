@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 from pathlib import Path
 
 import click
@@ -16,7 +17,19 @@ from grv.constants import (
     TREE_LAST_INDENT,
     TREE_LAST_ITEM,
 )
-from grv.status import BranchInfo, get_all_repos, get_repo_branches_fast
+from grv.status import (
+    BranchInfo,
+    get_all_repos,
+    get_repo_branches_fast,
+)
+
+
+class MenuAction(Enum):
+    """Actions that can be taken from the menu."""
+
+    SHELL = "shell"
+    CLEAN = "clean"
+    DELETE = "delete"
 
 
 def build_menu_entries() -> list[tuple[str, BranchInfo | None]]:
@@ -38,8 +51,11 @@ def build_menu_entries() -> list[tuple[str, BranchInfo | None]]:
     return entries
 
 
-def interactive_select() -> tuple[Path, str] | None:
-    """Show interactive tree menu and return (branch_path, branch_name) or None."""
+STATUS_BAR = "(s/enter) Shell  (c) Clean  (d) Delete"
+
+
+def interactive_select() -> tuple[Path, str, MenuAction] | None:
+    """Show interactive menu, return (branch_path, branch_name, action) or None."""
     entries = build_menu_entries()
     if not entries:
         return None
@@ -47,11 +63,14 @@ def interactive_select() -> tuple[Path, str] | None:
     display = [e[0] for e in entries]
     first_branch = next((i for i, e in enumerate(entries) if e[1] is not None), 0)
     title = f"grv workspace\n{get_grv_root()}\n"
+
     menu = TerminalMenu(
         display,
         title=title,
         cursor_index=first_branch,
         menu_cursor_style=MENU_CURSOR_STYLE,
+        status_bar=STATUS_BAR,
+        accept_keys=("enter", "s", "c", "d"),
     )
     selected: int | None = menu.show()
     if selected is None:
@@ -59,7 +78,19 @@ def interactive_select() -> tuple[Path, str] | None:
     branch = entries[selected][1]
     if branch is None:
         return None  # Selected a repo header, ignore
-    return (branch.path, branch.name)
+
+    # Determine action based on key pressed
+    key = menu.chosen_accept_key
+    if key in ("enter", "s"):
+        action = MenuAction.SHELL
+    elif key == "c":
+        action = MenuAction.CLEAN
+    elif key == "d":
+        action = MenuAction.DELETE
+    else:
+        action = MenuAction.SHELL
+
+    return (branch.path, branch.name, action)
 
 
 def shell_into(path: Path, branch_name: str) -> None:
