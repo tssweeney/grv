@@ -55,7 +55,7 @@ STATUS_BAR = "(s/enter) Shell  (c) Clean  (d) Delete"
 
 
 def interactive_select() -> tuple[Path, str, MenuAction] | None:
-    """Show interactive tree menu and return (branch_path, branch_name, action) or None."""
+    """Show interactive menu, return (branch_path, branch_name, action) or None."""
     entries = build_menu_entries()
     if not entries:
         return None

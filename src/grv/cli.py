@@ -132,11 +132,10 @@ def list_cmd() -> None:
             shell_into(path, branch_name)
         elif action == MenuAction.CLEAN:
             _clean_branch(path, branch_name, force=False)
-        elif action == MenuAction.DELETE:
-            if click.confirm(
-                f"\nForce delete '{branch_name}'? This cannot be undone.", default=False
-            ):
-                _clean_branch(path, branch_name, force=True)
+        elif action == MenuAction.DELETE and click.confirm(
+            f"\nForce delete '{branch_name}'? This cannot be undone.", default=False
+        ):
+            _clean_branch(path, branch_name, force=True)
 
 
 @main.command()
