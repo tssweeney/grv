@@ -137,6 +137,212 @@ class TestList:
             runner.invoke(main, ["list"])
             mock_shell.assert_not_called()
 
+    def test_list_clean_action_safe_removes_empty_repo(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        safe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=True,
+            is_merged=True,
+            unpushed_commits=0,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.CLEAN),
+            ),
+            patch("grv.cli.get_branch_status", return_value=safe_status),
+            patch("grv.cli.get_repo_branches_fast", return_value=[]),
+            patch("subprocess.run"),
+        ):
+            result = runner.invoke(main, ["list"])
+            assert "Cleaning 'feature'" in result.output
+            assert "Removing empty repo" in result.output
+            assert "Done" in result.output
+
+    def test_list_clean_action_safe_keeps_nonempty_repo(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        safe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=True,
+            is_merged=True,
+            unpushed_commits=0,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        other_path = repo_path / "tree_branches" / "other"
+        other_branch = BranchInfo(name="other", path=other_path)
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.CLEAN),
+            ),
+            patch("grv.cli.get_branch_status", return_value=safe_status),
+            patch("grv.cli.get_repo_branches_fast", return_value=[other_branch]),
+            patch("subprocess.run"),
+        ):
+            result = runner.invoke(main, ["list"])
+            assert "Cleaning 'feature'" in result.output
+            assert "Removing empty repo" not in result.output
+            assert "Done" in result.output
+
+    def test_list_clean_action_unsafe_no_remote(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        unsafe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=False,
+            is_merged=False,
+            unpushed_commits=0,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.CLEAN),
+            ),
+            patch("grv.cli.get_branch_status", return_value=unsafe_status),
+        ):
+            result = runner.invoke(main, ["list"])
+            assert "Cannot clean 'feature'" in result.output
+            assert "No remote branch found" in result.output
+
+    def test_list_clean_action_unsafe_unpushed(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        unsafe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=True,
+            is_merged=False,
+            unpushed_commits=2,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.CLEAN),
+            ),
+            patch("grv.cli.get_branch_status", return_value=unsafe_status),
+        ):
+            result = runner.invoke(main, ["list"])
+            assert "Cannot clean 'feature'" in result.output
+            assert "2 unpushed commit(s)" in result.output
+
+    def test_list_clean_action_unsafe_uncommitted(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        unsafe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=True,
+            is_merged=False,
+            unpushed_commits=0,
+            uncommitted_changes=5,
+            insertions=3,
+            deletions=2,
+        )
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.CLEAN),
+            ),
+            patch("grv.cli.get_branch_status", return_value=unsafe_status),
+        ):
+            result = runner.invoke(main, ["list"])
+            assert "Cannot clean 'feature'" in result.output
+            assert "5 uncommitted changes" in result.output
+
+    def test_list_delete_action_confirmed(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        branch_path.mkdir(parents=True)
+        (repo_path / "trunk").mkdir(parents=True)
+        unsafe_status = BranchStatus(
+            name="feature",
+            path=branch_path,
+            has_remote=False,
+            is_merged=False,
+            unpushed_commits=1,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.DELETE),
+            ),
+            patch("grv.cli.get_branch_status", return_value=unsafe_status),
+            patch("grv.cli.get_repo_branches_fast", return_value=[]),
+            patch("subprocess.run"),
+        ):
+            result = runner.invoke(main, ["list"], input="y\n")
+            assert "Force deleting 'feature'" in result.output
+            assert "Done" in result.output
+
+    def test_list_delete_action_declined(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        repo_path = tmp_path / "repo"
+        branch_path = repo_path / "tree_branches" / "feature"
+        with (
+            patch("grv.cli.get_all_repos", return_value=[("repo", repo_path)]),
+            patch(
+                "grv.menu.interactive_select",
+                return_value=(branch_path, "feature", MenuAction.DELETE),
+            ),
+        ):
+            result = runner.invoke(main, ["list"], input="n\n")
+            assert "Force deleting" not in result.output
+
 
 class TestClean:
     def test_clean_no_repos(
