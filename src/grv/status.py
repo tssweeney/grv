@@ -7,7 +7,6 @@ from pathlib import Path
 from grv.config import get_grv_root
 from grv.constants import (
     DELETION_PATTERN,
-    GIT_DIR,
     GIT_REMOTE_NAME,
     INSERTION_PATTERN,
     REPOS_DIR,
