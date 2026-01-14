@@ -6,7 +6,7 @@ from pathlib import Path
 
 import click
 
-from grv.config import extract_repo_id, get_grv_root
+from grv.config import expand_gh_shorthand, extract_repo_id, get_grv_root
 from grv.constants import (
     DEFAULT_SHELL,
     REPOS_DIR,
@@ -48,12 +48,19 @@ def main(ctx: click.Context) -> None:
 )
 def shell(repo: str, branch: str | None = None, from_branch: str | None = None) -> None:
     """Open a shell in a git worktree."""
+    # Expand shorthand (e.g., gh:user/repo@main) and extract embedded from_branch
+    expanded_repo, shorthand_from_branch = expand_gh_shorthand(repo)
+
+    # Shorthand from_branch is used only if --from flag not explicitly specified
+    if from_branch is None and shorthand_from_branch is not None:
+        from_branch = shorthand_from_branch
+
     root = get_grv_root()
-    repo_id = extract_repo_id(repo)
+    repo_id = extract_repo_id(expanded_repo)
     repo_path = root / REPOS_DIR / repo_id
 
     trunk_path = repo_path / TRUNK_DIR
-    ensure_base_repo(repo, trunk_path)
+    ensure_base_repo(expanded_repo, trunk_path)
 
     if branch is None:
         branch = get_default_branch(trunk_path)
@@ -80,12 +87,12 @@ def _clean_branch(path: Path, branch_name: str, force: bool = False) -> bool:
 
     if not force and not status.is_safe_to_clean:
         click.secho(f"\nCannot clean '{branch_name}' - not safe to remove.", fg="red")
-        if not status.has_remote:
-            click.echo("  - No remote branch found")
-        if status.unpushed_commits > 0:
-            click.echo(f"  - {status.unpushed_commits} unpushed commit(s)")
         if status.uncommitted_changes > 0:
             click.echo(f"  - {status.uncommitted_changes} uncommitted changes")
+        if not status.has_remote and not status.is_merged:
+            click.echo("  - No remote branch found and not merged into main")
+        elif status.has_remote and status.unpushed_commits > 0:
+            click.echo(f"  - {status.unpushed_commits} unpushed commit(s)")
         return False
 
     if force and not status.is_safe_to_clean:
