@@ -27,7 +27,8 @@ class TestBranchStatus:
         )
         assert status.is_safe_to_clean is True
 
-    def test_is_safe_to_clean_no_remote(self) -> None:
+    def test_is_safe_to_clean_merged_no_remote(self) -> None:
+        """Merged branch without remote (PR merged, remote deleted) IS safe."""
         status = BranchStatus(
             name="feature",
             path=Path("/tmp/feature"),
@@ -37,6 +38,34 @@ class TestBranchStatus:
             uncommitted_changes=0,
             insertions=0,
             deletions=0,
+        )
+        assert status.is_safe_to_clean is True
+
+    def test_is_safe_to_clean_no_remote_not_merged(self) -> None:
+        """No remote AND not merged is NOT safe."""
+        status = BranchStatus(
+            name="feature",
+            path=Path("/tmp/feature"),
+            has_remote=False,
+            is_merged=False,
+            unpushed_commits=3,
+            uncommitted_changes=0,
+            insertions=0,
+            deletions=0,
+        )
+        assert status.is_safe_to_clean is False
+
+    def test_is_safe_to_clean_merged_with_uncommitted(self) -> None:
+        """Even if merged, uncommitted changes block cleaning."""
+        status = BranchStatus(
+            name="feature",
+            path=Path("/tmp/feature"),
+            has_remote=False,
+            is_merged=True,
+            unpushed_commits=0,
+            uncommitted_changes=5,
+            insertions=3,
+            deletions=2,
         )
         assert status.is_safe_to_clean is False
 

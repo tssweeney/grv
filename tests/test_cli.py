@@ -101,6 +101,39 @@ class TestShell:
             call_kwargs = mock_ensure_worktree.call_args
             assert call_kwargs.kwargs.get("from_branch") == "develop"
 
+    def test_shell_with_gh_shorthand_from_branch(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test gh: shorthand with @from_branch extracts and uses the base branch."""
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        with (
+            patch("grv.cli.ensure_base_repo") as mock_ensure_base,
+            patch("grv.cli.ensure_worktree") as mock_ensure_worktree,
+            patch("os.chdir"),
+            patch("os.execvp"),
+        ):
+            tree_path = (
+                tmp_path
+                / "repos"
+                / "github_com_user_repo"
+                / "tree_branches"
+                / "feature"
+            )
+            tree_path.mkdir(parents=True)
+            result = runner.invoke(
+                main,
+                ["shell", "gh:user/repo@develop", "feature"],
+            )
+            assert "Branch: feature" in result.output
+            # Verify the URL was expanded
+            mock_ensure_base.assert_called_once()
+            base_call_args = mock_ensure_base.call_args[0]
+            assert base_call_args[0] == "git@github.com:user/repo.git"
+            # Verify from_branch was extracted from shorthand
+            mock_ensure_worktree.assert_called_once()
+            worktree_call_kwargs = mock_ensure_worktree.call_args
+            assert worktree_call_kwargs.kwargs.get("from_branch") == "develop"
+
 
 class TestList:
     def test_list_no_repos(
@@ -480,8 +513,8 @@ class TestClean:
             name="dirty",
             path=tmp_path / "dirty",
             has_remote=False,
-            is_merged=True,
-            unpushed_commits=0,
+            is_merged=False,  # Not merged, so NOT safe to clean
+            unpushed_commits=2,
             uncommitted_changes=0,
             insertions=0,
             deletions=0,

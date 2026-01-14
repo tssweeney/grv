@@ -39,12 +39,26 @@ class BranchStatus:
 
     @property
     def is_safe_to_clean(self) -> bool:
-        """Check if this branch can be safely removed."""
-        return (
-            self.has_remote
-            and self.unpushed_commits == 0
-            and self.uncommitted_changes == 0
-        )
+        """Check if this branch can be safely removed.
+
+        A branch is safe to clean if:
+        1. No uncommitted changes (we don't want to lose local work), AND
+        2. Either:
+           a. Has remote branch with all commits pushed (traditional case), OR
+           b. Is fully merged into main (PR merged, remote branch deleted)
+        """
+        if self.uncommitted_changes > 0:
+            return False
+
+        # Case A: Has remote and all commits are pushed
+        if self.has_remote and self.unpushed_commits == 0:
+            return True
+
+        # Case B: Merged into main (even if remote is gone)
+        if self.is_merged:
+            return True
+
+        return False
 
 
 def get_branch_status(tree_path: Path, trunk_path: Path, branch: str) -> BranchStatus:

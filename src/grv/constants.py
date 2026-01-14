@@ -11,6 +11,10 @@ GIT_DIR = ".git"
 GIT_SUFFIX = ".git"
 GIT_SSH_PREFIX = "git@"
 GIT_REMOTE_NAME = "origin"
+
+# GitHub shorthand constants
+GH_SHORTHAND_PREFIX = "gh:"
+GITHUB_SSH_HOST = "github.com"
 GIT_CLONE_FILTER = "--filter=blob:none"
 GIT_REF_REMOTE_HEAD = "refs/remotes/origin/HEAD"
 GIT_REF_HEADS_FMT = "refs/heads/{branch}"
