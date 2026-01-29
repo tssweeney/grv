@@ -5,9 +5,9 @@ import pytest
 from click.testing import CliRunner
 
 from grv.cli import main
+from grv.constants import WORKTREES_DIR
 from grv.menu import MenuAction
 from grv.status import BranchInfo, BranchStatus
-from grv.constants import WORKTREES_DIR
 
 
 @pytest.fixture

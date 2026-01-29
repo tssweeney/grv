@@ -26,6 +26,7 @@ def get_default_branch(repo_path: Path) -> str:
     result = run_git("symbolic-ref", GIT_REF_REMOTE_HEAD, cwd=repo_path, capture=True)
     return result.stdout.strip().split("/")[-1]
 
+
 def branch_exists_locally(base_path: Path, branch: str) -> bool:
     """Check if a branch exists locally."""
     ref = GIT_REF_HEADS_FMT.format(branch=branch)

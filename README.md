@@ -45,9 +45,9 @@ pip install grv
 grv shell git@github.com:user/repo.git
 grv shell git@github.com:user/repo.git feature-branch
 
-# Use --local to create worktree from current repository
-grv shell --local feature-branch    # Create/reuse worktree for feature-branch
-grv shell --local                   # Create/reuse worktree for current branch
+# Use --local to reuse/create a worktree for the repo rooted at the current directory
+grv shell --local feature-branch
+grv shell --local
 
 # List all worktrees with status
 grv list
@@ -76,6 +76,8 @@ grv clean --dry-run
 Each branch gets its own directory. Switch between branches by switching directories.
 
 When using `--local`, worktrees are created from your current repository instead of cloning a remote.
+
+Local worktrees live under `~/.grv/worktrees/<repo-name>/<branch>` and are reused if the path already exists.
 
 ## Commands
 

@@ -162,7 +162,9 @@ class TestIsWorktreeRegistered:
     def test_worktree_not_registered(self, tmp_path: Path) -> None:
         tree_path = tmp_path / "worktree"
         with patch("grv.git.run_git") as mock_git:
-            mock_git.return_value = MagicMock(stdout="worktree /other/path\nHEAD abcd1234\n")
+            mock_git.return_value = MagicMock(
+                stdout="worktree /other/path\nHEAD abcd1234\n"
+            )
             result = is_worktree_registered(tmp_path, tree_path)
             assert result is False
 

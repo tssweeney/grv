@@ -71,7 +71,8 @@ def shell(
 ) -> None:
     """Open a shell in a git worktree.
 
-    Use --local to create or reuse a worktree from the repository rooted at the current directory.
+    Use --local to create or reuse a worktree rooted at the current
+    directory.
     """
     root = get_grv_root()
 
