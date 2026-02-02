@@ -33,3 +33,18 @@ DELETION_PATTERN = r"(\d+) deletion"
 
 # Menu styling
 MENU_CURSOR_STYLE = ("fg_cyan", "bold")
+
+# GitHub PR URL patterns
+GITHUB_PR_PATH_PATTERN = r"^/?([^/]+)/([^/]+)/pull/(\d+)"
+GITHUB_HOST = "github.com"
+
+# GitHub CLI
+GH_CLI_INSTALL_URL = "https://cli.github.com"
+GH_PR_JSON_FIELDS = "headRefName,headRepository"
+
+# Error messages
+ERR_GH_NOT_FOUND = (
+    "GitHub CLI (gh) is required for PR URLs. Install from https://cli.github.com"
+)
+ERR_INVALID_PR_URL = "Invalid GitHub PR URL"
+ERR_PR_PARSE_FAILED = "Failed to parse gh output"

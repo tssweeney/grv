@@ -539,3 +539,165 @@ class TestClean:
             assert "Cleaned 1 worktree" in result.output
             assert "1 empty repo" in result.output
             assert not repo_path.exists()
+
+
+class TestShellWithPrUrl:
+    """
+    Requirement: Accept GitHub PR URLs as alternative to repo + branch
+    Interface: CLI stdout (terminal output)
+    """
+
+    def test_shell_with_pr_url_resolves_and_enters(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Given: User passes a GitHub PR URL
+        When: grv shell is invoked
+        Then: Output shows "Resolving PR..." and resolved branch info
+        """
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        tree_path = (
+            tmp_path
+            / "repos"
+            / "github_com_owner_repo"
+            / "tree_branches"
+            / "feature-branch"
+        )
+        tree_path.mkdir(parents=True)
+
+        with (
+            patch("grv.cli.is_pr_url", return_value=True),
+            patch(
+                "grv.cli.resolve_pr",
+                return_value=type(
+                    "PRInfo",
+                    (),
+                    {
+                        "repo_url": "https://github.com/owner/repo",
+                        "branch": "feature-branch",
+                    },
+                )(),
+            ),
+            patch("grv.cli.ensure_base_repo"),
+            patch("grv.cli.ensure_worktree"),
+            patch("os.chdir"),
+            patch("os.execvp"),
+        ):
+            result = runner.invoke(
+                main, ["shell", "https://github.com/owner/repo/pull/42"]
+            )
+            assert "Resolving PR" in result.output
+            assert "Branch: feature-branch" in result.output
+
+    def test_shell_with_pr_url_and_branch_arg_errors(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Given: User passes both a PR URL and a branch argument
+        When: grv shell is invoked
+        Then: Error message is shown
+        """
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+
+        with patch("grv.cli.is_pr_url", return_value=True):
+            result = runner.invoke(
+                main, ["shell", "https://github.com/owner/repo/pull/42", "some-branch"]
+            )
+            assert result.exit_code != 0
+            assert "Cannot specify branch" in result.output
+
+    def test_shell_with_pr_url_respects_from_option(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Given: User passes a PR URL with --from option
+        When: grv shell is invoked
+        Then: The --from option is passed to ensure_worktree
+        """
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        tree_path = (
+            tmp_path
+            / "repos"
+            / "github_com_owner_repo"
+            / "tree_branches"
+            / "feature-branch"
+        )
+        tree_path.mkdir(parents=True)
+
+        with (
+            patch("grv.cli.is_pr_url", return_value=True),
+            patch(
+                "grv.cli.resolve_pr",
+                return_value=type(
+                    "PRInfo",
+                    (),
+                    {
+                        "repo_url": "https://github.com/owner/repo",
+                        "branch": "feature-branch",
+                    },
+                )(),
+            ),
+            patch("grv.cli.ensure_base_repo"),
+            patch("grv.cli.ensure_worktree") as mock_ensure_worktree,
+            patch("os.chdir"),
+            patch("os.execvp"),
+        ):
+            runner.invoke(
+                main,
+                ["shell", "https://github.com/owner/repo/pull/42", "--from", "develop"],
+            )
+            mock_ensure_worktree.assert_called_once()
+            call_kwargs = mock_ensure_worktree.call_args
+            assert call_kwargs.kwargs.get("from_branch") == "develop"
+
+    def test_shell_with_pr_url_resolution_error(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Given: PR URL resolution fails (e.g., gh not installed)
+        When: grv shell is invoked
+        Then: Error message is displayed
+        """
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+
+        with (
+            patch("grv.cli.is_pr_url", return_value=True),
+            patch(
+                "grv.cli.resolve_pr",
+                side_effect=RuntimeError(
+                    "GitHub CLI (gh) is required. Install from https://cli.github.com"
+                ),
+            ),
+        ):
+            result = runner.invoke(
+                main, ["shell", "https://github.com/owner/repo/pull/42"]
+            )
+            assert result.exit_code != 0
+            assert "GitHub CLI (gh) is required" in result.output
+
+    def test_shell_with_regular_repo_url_unchanged(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Given: User passes a regular repo URL (not a PR URL)
+        When: grv shell is invoked
+        Then: Existing behavior is unchanged (no PR resolution)
+        """
+        monkeypatch.setenv("GRV_ROOT", str(tmp_path))
+        tree_path = (
+            tmp_path / "repos" / "github_com_user_repo" / "tree_branches" / "main"
+        )
+        tree_path.mkdir(parents=True)
+
+        with (
+            patch("grv.cli.is_pr_url", return_value=False),
+            patch("grv.cli.ensure_base_repo"),
+            patch("grv.cli.ensure_worktree"),
+            patch("grv.cli.get_default_branch", return_value="main"),
+            patch("os.chdir"),
+            patch("os.execvp"),
+        ):
+            result = runner.invoke(main, ["shell", "https://github.com/user/repo.git"])
+            # Should NOT show "Resolving PR" message
+            assert "Resolving PR" not in result.output
+            assert "Branch: main" in result.output

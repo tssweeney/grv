@@ -15,6 +15,7 @@ from grv.constants import (
     TRUNK_DIR,
 )
 from grv.git import ensure_base_repo, ensure_worktree, get_default_branch
+from grv.pr import is_pr_url, resolve_pr
 from grv.status import (
     BranchStatus,
     get_all_repos,
@@ -32,6 +33,7 @@ def main(ctx: click.Context) -> None:
     Examples:
         grv shell git@github.com:user/repo.git
         grv shell git@github.com:user/repo.git feature-branch
+        grv shell https://github.com/user/repo/pull/123
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
@@ -47,7 +49,24 @@ def main(ctx: click.Context) -> None:
     help="Base branch to create new branch from (instead of main/master).",
 )
 def shell(repo: str, branch: str | None = None, from_branch: str | None = None) -> None:
-    """Open a shell in a git worktree."""
+    """Open a shell in a git worktree.
+
+    REPO can be a git URL or a GitHub PR URL (e.g., github.com/owner/repo/pull/123).
+    """
+    # Handle PR URLs
+    if is_pr_url(repo):
+        if branch is not None:
+            click.secho("Cannot specify branch argument with a PR URL.", fg="red")
+            raise SystemExit(1)
+        click.echo("Resolving PR...")
+        try:
+            pr_info = resolve_pr(repo)
+        except RuntimeError as e:
+            click.secho(str(e), fg="red")
+            raise SystemExit(1) from e
+        repo = pr_info.repo_url
+        branch = pr_info.branch
+
     root = get_grv_root()
     repo_id = extract_repo_id(repo)
     repo_path = root / REPOS_DIR / repo_id
